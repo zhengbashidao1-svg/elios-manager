@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>エリオス・マネージャー v2</title>
+<style>
+:root{
+  --bg:#f4f7fc; --card:rgba(255,255,255,.94); --line:#dbe7ff; --text:#1f2937; --muted:#6b7280;
+  --soft:#eef4ff; --accent:#6e93ff; --shadow:0 10px 24px rgba(31,41,55,.06); --navh:88px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic","Noto Sans JP",sans-serif;background:var(--bg);color:var(--text)}
+button,input,select,textarea{font:inherit}
+.app{max-width:560px;height:100vh;margin:0 auto;padding:10px 10px calc(var(--navh) + env(safe-area-inset-bottom) + 8px);display:flex;flex-direction:column;overflow:hidden}
+.screen{display:none;height:100%;min-height:0}
+.screen.active{display:flex}
+.home-screen{flex-direction:column}
+.hero{position:relative;flex:1;min-height:0;overflow:hidden;border-radius:28px;border:1px solid var(--line);box-shadow:var(--shadow);background:linear-gradient(180deg,#fbfdff,#edf4ff)}
+.bg-layer{position:absolute;inset:0;background-size:cover;background-position:center;transition:background .35s ease}
+.bg-overlay{position:absolute;inset:0;background:linear-gradient(180deg, rgba(255,255,255,.15), rgba(255,255,255,.38) 52%, rgba(255,255,255,.84))}
+.topbar{position:absolute;top:10px;left:10px;right:10px;z-index:3;display:flex;gap:8px;align-items:stretch}
+.top-pill{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 6px 16px rgba(31,41,55,.04);padding:10px 12px;backdrop-filter:blur(8px)}
+.time-pill{min-width:96px;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800}
+.top-right{flex:1;display:grid;grid-template-columns:1fr;gap:8px}
+.mini-line{font-size:12px;color:var(--muted);font-weight:700;margin-bottom:4px}
+.main-line{font-size:14px;font-weight:800;line-height:1.45}
+.char-wrap{position:absolute;left:0;right:0;top:78px;bottom:164px;z-index:2;display:flex;align-items:flex-end;justify-content:center;overflow:hidden}
+.character{width:100%;max-width:500px;height:100%;display:flex;align-items:flex-end;justify-content:center}
+.character img{max-width:100%;max-height:100%;object-fit:contain;object-position:center bottom;filter:drop-shadow(0 8px 20px rgba(0,0,0,.14));animation:floaty 4.2s ease-in-out infinite}
+@keyframes floaty{0%{transform:translateY(0)}50%{transform:translateY(-5px)}100%{transform:translateY(0)}}
+.speech-wrap{position:absolute;left:12px;right:12px;bottom:110px;z-index:4}
+.speech{position:relative;background:rgba(255,255,255,.95);border:1px solid #e8efff;border-radius:22px;padding:14px 16px;box-shadow:0 8px 18px rgba(31,41,55,.06);backdrop-filter:blur(10px)}
+.speech::after{content:"";position:absolute;left:24px;bottom:-10px;width:18px;height:18px;background:rgba(255,255,255,.95);border-right:1px solid #e8efff;border-bottom:1px solid #e8efff;transform:rotate(45deg)}
+.speech-name{font-size:12px;color:var(--muted);font-weight:800;margin-bottom:5px}
+.speech-main{font-size:16px;line-height:1.72;font-weight:800;min-height:92px}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.badge{display:inline-flex;align-items:center;padding:7px 11px;border-radius:999px;border:1px solid var(--line);background:var(--soft);font-size:12px;font-weight:800}
+.panel{background:#fff;border:1px solid var(--line);border-radius:24px;padding:14px;box-shadow:var(--shadow);height:100%;overflow:auto}
+.panel-title{margin:0 0 8px;font-size:22px;font-weight:800}
+.panel-sub{margin:0 0 14px;font-size:14px;line-height:1.7;color:var(--muted)}
+.grid{display:grid;gap:10px}
+.button-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.action-btn{border:none;border-radius:18px;padding:14px;background:linear-gradient(180deg,#fbfdff,#eef4ff);border:1px solid var(--line);font-weight:800;color:var(--text);text-align:left;min-height:78px}
+.reply-card,.info-card,.date-card,.settings-card{background:linear-gradient(180deg,#fbfdff,#f5f8ff);border:1px solid var(--line);border-radius:20px;padding:14px}
+.info-title{font-size:13px;color:var(--muted);font-weight:800;margin-bottom:6px}
+.info-main{font-size:16px;font-weight:800;line-height:1.6}
+.info-sub{font-size:13px;color:var(--muted);line-height:1.6;margin-top:4px}
+.reply-text{font-size:16px;line-height:1.8;font-weight:800}
+.form-row{display:grid;gap:10px;margin-top:10px}
+.form-row input,.form-row select,.form-row textarea{width:100%;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:#fff}
+.primary-btn,.ghost-btn,.danger-btn,.chip-btn{border:none;border-radius:14px;padding:12px 16px;font-size:15px;font-weight:800}
+.primary-btn{background:linear-gradient(90deg,#6d93ff,#7ea7ff);color:#fff;box-shadow:0 8px 18px rgba(91,124,255,.18)}
+.ghost-btn{background:#fff;border:1px solid var(--line);color:var(--text)}
+.danger-btn{background:#fff2f2;border:1px solid #ffcaca;color:#a33030}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.schedule-item{border:1px solid var(--line);border-radius:18px;padding:12px;background:#fff;display:grid;gap:6px}
+.small{font-size:12px;color:var(--muted)}
+.date-picks{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.chip-group{display:flex;gap:8px;flex-wrap:wrap}
+.chip-btn{background:#fff;border:1px solid var(--line);color:var(--text)}
+.chip-btn.active{background:var(--soft);border-color:#bcd2ff;color:#3454c6}
+.split{display:grid;gap:10px;grid-template-columns:1fr 1fr}
+.note{font-size:12px;color:var(--muted);line-height:1.6}
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:10;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:rgba(245,247,251,.95);backdrop-filter:blur(12px);border-top:1px solid #dfe8ff}
+.nav-inner{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.nav-btn{border:none;background:#fff;border:1px solid var(--line);color:var(--text);border-radius:16px;padding:10px 6px;box-shadow:0 6px 14px rgba(31,41,55,.04);display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;font-weight:800}
+.nav-btn.active{background:linear-gradient(180deg,#eef4ff,#dfeaff);border-color:#bfd1ff;color:#3454c6}
+.nav-ico{font-size:20px}
+@media (max-width:520px){
+  .time-pill{font-size:25px;min-width:86px}
+  .main-line{font-size:13px}
+  .speech-main{font-size:15px}
+  .split,.date-picks{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <section id="screen-home" class="screen home-screen active">
+    <div class="hero">
+      <div class="bg-layer" id="bgLayer"></div>
+      <div class="bg-overlay"></div>
+      <div class="topbar">
+        <div class="top-pill time-pill" id="timeText">08:34</div>
+        <div class="top-right">
+          <div class="top-pill">
+            <div class="mini-line">天気</div>
+            <div class="main-line" id="weatherTop">取得中...</div>
+          </div>
+          <div class="top-pill">
+            <div class="mini-line">今日の予定</div>
+            <div class="main-line" id="scheduleTop">予定を確認中...</div>
+          </div>
+        </div>
+      </div>
+      <div class="char-wrap">
+        <div class="character">
+          <img id="charImage" src="" alt="エリオス" />
+        </div>
+      </div>
+      <div class="speech-wrap">
+        <div class="speech">
+          <div class="speech-name">月城 エリオス</div>
+          <div class="speech-main" id="speechText">読み込み中です、お嬢様。</div>
+          <div class="badges">
+            <div class="badge" id="timeBadge">昼</div>
+            <div class="badge" id="moodBadge">整える</div>
+            <div class="badge" id="regionBadge">地域：東京</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="screen-talk" class="screen">
+    <div class="panel">
+      <h2 class="panel-title">会話</h2>
+      <p class="panel-sub">ボタンを押すと、エリオスが返答します。</p>
+      <div class="button-grid">
+        <button class="action-btn" onclick="setTalkReply('greet')">おはよう<br><span class="small">挨拶する</span></button>
+        <button class="action-btn" onclick="setTalkReply('tired')">疲れた<br><span class="small">励ましてほしい</span></button>
+        <button class="action-btn" onclick="setTalkReply('weather')">天気を知りたい<br><span class="small">地域の天気を聞く</span></button>
+        <button class="action-btn" onclick="setTalkReply('today')">今日の予定<br><span class="small">予定を確認</span></button>
+        <button class="action-btn" onclick="setTalkReply('tomorrow')">明日の予定<br><span class="small">明日の確認</span></button>
+        <button class="action-btn" onclick="setTalkReply('praise')">褒めて<br><span class="small">やる気アップ</span></button>
+        <button class="action-btn" onclick="setTalkReply('scold')">叱って<br><span class="small">サボり対策</span></button>
+        <button class="action-btn" onclick="setTalkReply('chat')">雑談したい<br><span class="small">少し話す</span></button>
+      </div>
+      <div class="reply-card" style="margin-top:12px;">
+        <div class="info-title">エリオスの返答</div>
+        <div class="reply-text" id="talkReply">お嬢様、お呼びでしょうか。</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="screen-plan" class="screen">
+    <div class="panel">
+      <h2 class="panel-title">予定</h2>
+      <p class="panel-sub">日時と内容を登録すると、ホームで今日と明日の予定をエリオスが教えます。</p>
+
+      <div class="settings-card">
+        <div class="info-title">地域設定</div>
+        <div class="info-main">天気を表示する地域</div>
+        <div class="form-row">
+          <input id="regionInput" placeholder="例：豊島区、池袋、東京、大阪" />
+          <div class="row">
+            <button class="primary-btn" onclick="saveRegion()">地域を保存</button>
+            <button class="ghost-btn" onclick="setDefaultRegion()">東京に戻す</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="date-card" style="margin-top:12px;">
+        <div class="info-title">予定を追加</div>
+        <div class="split">
+          <input id="planDate" type="date" />
+          <input id="planTime" type="time" />
+        </div>
+        <div class="form-row">
+          <input id="planText" type="text" placeholder="予定内容を入力" />
+          <button class="primary-btn" onclick="addSchedule()">予定を保存</button>
+        </div>
+      </div>
+
+      <div class="date-card" style="margin-top:12px;">
+        <div class="info-title">今日の予定</div>
+        <div id="todayScheduleList" class="grid"></div>
+      </div>
+
+      <div class="date-card" style="margin-top:12px;">
+        <div class="info-title">明日の予定</div>
+        <div id="tomorrowScheduleList" class="grid"></div>
+      </div>
+
+      <div class="date-card" style="margin-top:12px;">
+        <div class="info-title">すべての予定</div>
+        <div id="scheduleList" class="grid"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="screen-date" class="screen">
+    <div class="panel">
+      <h2 class="panel-title">デート</h2>
+      <p class="panel-sub">服装と行き先を選ぶと、エリオスがその場面に合わせてエスコートします。</p>
+
+      <div class="date-picks">
+        <div class="date-card">
+          <div class="info-title">服装</div>
+          <div class="chip-group">
+            <button class="chip-btn active" data-type="outfit" data-value="執事服">執事服</button>
+            <button class="chip-btn" data-type="outfit" data-value="ジャケット">ジャケット</button>
+            <button class="chip-btn" data-type="outfit" data-value="カジュアル">カジュアル</button>
+            <button class="chip-btn" data-type="outfit" data-value="リラックス">リラックス</button>
+          </div>
+        </div>
+        <div class="date-card">
+          <div class="info-title">行き先</div>
+          <div class="chip-group">
+            <button class="chip-btn active" data-type="place" data-value="公園">公園</button>
+            <button class="chip-btn" data-type="place" data-value="カフェ">カフェ</button>
+            <button class="chip-btn" data-type="place" data-value="お家デート">お家デート</button>
+            <button class="chip-btn" data-type="place" data-value="ドライブデート">ドライブデート</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="date-card" style="margin-top:12px;">
+        <div class="info-title">デートプラン</div>
+        <div class="info-main" id="dateSummary">執事服 × 公園</div>
+        <div class="reply-text" id="dateReply" style="margin-top:10px;">本日は穏やかな風が心地よいですね。ゆっくり歩きましょうか。</div>
+        <div class="note" style="margin-top:8px;" id="dateNote">背景や服装差し替え用の土台として使えるページです。</div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <button class="nav-btn active" data-screen="home" onclick="openScreen('home')"><div class="nav-ico">🏠</div><div>ホーム</div></button>
+    <button class="nav-btn" data-screen="talk" onclick="openScreen('talk')"><div class="nav-ico">💬</div><div>会話</div></button>
+    <button class="nav-btn" data-screen="plan" onclick="openScreen('plan')"><div class="nav-ico">📅</div><div>予定</div></button>
+    <button class="nav-btn" data-screen="date" onclick="openScreen('date')"><div class="nav-ico">❤️</div><div>デート</div></button>
+  </div>
+</nav>
+
+<script>
+const WEATHER_KEY = "elios_weather_region_v2";
+const SCHEDULE_KEY = "elios_schedule_v2";
+const DATE_PREF_KEY = "elios_date_pref_v2";
+let weatherData = null;
+let region = loadRegion();
+let schedules = loadSchedules();
+let datePref = loadDatePref();
+
+function openScreen(name){
+  document.querySelectorAll(".screen").forEach(el => el.classList.remove("active"));
+  document.getElementById("screen-" + name).classList.add("active");
+  document.querySelectorAll(".nav-btn").forEach(btn => btn.classList.remove("active"));
+  const target = document.querySelector('.nav-btn[data-screen="' + name + '"]');
+  if(target) target.classList.add("active");
+}
+function updateClock(){
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,"0");
+  const m = String(now.getMinutes()).padStart(2,"0");
+  document.getElementById("timeText").textContent = h + ":" + m;
+}
+function updateHomeTheme(){
+  const hour = new Date().getHours();
+  const bg = document.getElementById("bgLayer");
+  const timeBadge = document.getElementById("timeBadge");
+  const moodBadge = document.getElementById("moodBadge");
+  if(hour >= 6 && hour < 12){
+    bg.style.background = "linear-gradient(180deg,#fff6ea,#dfeeff 55%,#f3f8ff)";
+    timeBadge.textContent = "朝"; moodBadge.textContent = "穏やか";
+  }else if(hour >= 12 && hour < 18){
+    bg.style.background = "linear-gradient(180deg,#f4fbff,#dff6ea 55%,#f7fbff)";
+    timeBadge.textContent = "昼"; moodBadge.textContent = "整える";
+  }else{
+    bg.style.background = "linear-gradient(180deg,#24345e,#5d6fa3 58%,#e8eefb)";
+    timeBadge.textContent = "夜"; moodBadge.textContent = "やさしい";
+  }
+}
+function trySetImage(element, baseName){
+  const candidates = [baseName + ".png", baseName + ".PNG", baseName + ".jpg", baseName + ".JPG", baseName + ".jpeg", baseName + ".JPEG"];
+  let index = 0;
+  function loadNext(){
+    if(index >= candidates.length){ return; }
+    const src = candidates[index];
+    const tester = new Image();
+    tester.onload = function(){ element.src = src; };
+    tester.onerror = function(){ index += 1; loadNext(); };
+    tester.src = src;
+  }
+  loadNext();
+}
+function loadRegion(){
+  try{
+    return JSON.parse(localStorage.getItem(WEATHER_KEY)) || {name:"東京", latitude:35.6895, longitude:139.6917};
+  }catch(e){
+    return {name:"東京", latitude:35.6895, longitude:139.6917};
+  }
+}
+function saveRegionData(data){
+  region = data;
+  localStorage.setItem(WEATHER_KEY, JSON.stringify(data));
+  document.getElementById("regionBadge").textContent = "地域：" + data.name;
+  document.getElementById("regionInput").value = data.name;
+  loadWeather();
+}
+function setDefaultRegion(){ saveRegionData({name:"東京", latitude:35.6895, longitude:139.6917}); }
+async function saveRegion(){
+  const q = document.getElementById("regionInput").value.trim();
+  if(!q){ return; }
+  try{
+    const url = "https://geocoding-api.open-meteo.com/v1/search?name=" + encodeURIComponent(q) + "&count=1&language=ja&format=json";
+    const res = await fetch(url);
+    const data = await res.json();
+    if(!data.results || !data.results.length){ alert("地域が見つかりませんでした"); return; }
+    const r = data.results[0];
+    saveRegionData({name:r.name, latitude:r.latitude, longitude:r.longitude});
+  }catch(e){ alert("地域設定の取得に失敗しました"); }
+}
+async function loadWeather(){
+  try{
+    const url = "https://api.open-meteo.com/v1/forecast?latitude=" + region.latitude + "&longitude=" + region.longitude + "&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Asia%2FTokyo&forecast_days=2";
+    const res = await fetch(url);
+    const data = await res.json();
+    weatherData = data;
+    const code = data.daily.weathercode[0];
+    const tMax = Math.round(data.daily.temperature_2m_max[0]);
+    const tMin = Math.round(data.daily.temperature_2m_min[0]);
+    document.getElementById("weatherTop").textContent = region.name + " " + weatherCodeToText(code) + " " + tMin + "〜" + tMax + "℃";
+    updateHomeSpeech();
+  }catch(e){
+    document.getElementById("weatherTop").textContent = region.name + " 天気取得失敗";
+  }
+}
+function weatherCodeToText(code){
+  const map = {0:"快晴",1:"晴れ",2:"晴れ時々くもり",3:"くもり",45:"霧",48:"霧",51:"弱い霧雨",53:"霧雨",55:"強い霧雨",61:"弱い雨",63:"雨",65:"強い雨",71:"弱い雪",73:"雪",75:"強い雪",80:"にわか雨",81:"雨がち",82:"強いにわか雨",95:"雷雨"};
+  return map[code] || "変わりやすい空";
+}
+function loadSchedules(){
+  try{ return JSON.parse(localStorage.getItem(SCHEDULE_KEY)) || []; }
+  catch(e){ return []; }
+}
+function saveSchedules(){
+  localStorage.setItem(SCHEDULE_KEY, JSON.stringify(schedules));
+  renderSchedules();
+  updateHomeSpeech();
+}
+function addSchedule(){
+  const date = document.getElementById("planDate").value;
+  const time = document.getElementById("planTime").value;
+  const text = document.getElementById("planText").value.trim();
+  if(!date || !time || !text){ alert("日付・時間・予定内容を入力してください"); return; }
+  schedules.push({id:Date.now(), date, time, text});
+  schedules.sort((a,b) => (a.date + a.time).localeCompare(b.date + b.time));
+  document.getElementById("planText").value = "";
+  saveSchedules();
+}
+function removeSchedule(id){
+  schedules = schedules.filter(item => item.id !== id);
+  saveSchedules();
+}
+function getTodayStr(){
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+}
+function getTomorrowStr(){
+  const d = new Date(); d.setDate(d.getDate()+1);
+  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+}
+function getTodayPlans(){ return schedules.filter(x => x.date === getTodayStr()); }
+function getTomorrowPlans(){ return schedules.filter(x => x.date === getTomorrowStr()); }
+function renderSchedules(){
+  const list = document.getElementById("scheduleList");
+  const todayList = document.getElementById("todayScheduleList");
+  const tomorrowList = document.getElementById("tomorrowScheduleList");
+  list.innerHTML = ""; todayList.innerHTML = ""; tomorrowList.innerHTML = "";
+
+  const todayPlans = getTodayPlans();
+  const tomorrowPlans = getTomorrowPlans();
+
+  if(todayPlans.length === 0) todayList.innerHTML = '<div class="small">今日の予定はありません。</div>';
+  if(tomorrowPlans.length === 0) tomorrowList.innerHTML = '<div class="small">明日の予定はありません。</div>';
+  if(schedules.length === 0){
+    list.innerHTML = '<div class="small">まだ予定はありません。</div>';
+    document.getElementById("scheduleTop").textContent = "今日は予定がありません";
+    return;
+  }
+
+  todayPlans.forEach(item => todayList.appendChild(scheduleEl(item)));
+  tomorrowPlans.forEach(item => tomorrowList.appendChild(scheduleEl(item)));
+  schedules.forEach(item => list.appendChild(scheduleEl(item)));
+
+  const p = todayPlans[0] || tomorrowPlans[0];
+  document.getElementById("scheduleTop").textContent = p ? (todayPlans[0] ? p.time + " " + p.text : "明日 " + p.time + " " + p.text) : "今日は予定がありません";
+}
+function scheduleEl(item){
+  const div = document.createElement("div");
+  div.className = "schedule-item";
+  div.innerHTML = `
+    <div class="info-main">${item.date} ${item.time}</div>
+    <div>${item.text}</div>
+    <div><button class="danger-btn" onclick="removeSchedule(${item.id})">削除</button></div>
+  `;
+  return div;
+}
+function updateHomeSpeech(){
+  const todayPlans = getTodayPlans();
+  const tomorrowPlans = getTomorrowPlans();
+  let scheduleTop = "今日は予定がありません";
+  if(todayPlans.length){
+    const p = todayPlans[0];
+    scheduleTop = p.time + " " + p.text;
+  }else if(tomorrowPlans.length){
+    const p = tomorrowPlans[0];
+    scheduleTop = "明日 " + p.time + " " + p.text;
+  }
+  document.getElementById("scheduleTop").textContent = scheduleTop;
+
+  const hour = new Date().getHours();
+  const greet = hour < 12 ? "おはようございます" : (hour < 18 ? "日中は焦らず" : "本日もお疲れさまです");
+  let weatherLine = "";
+  if(weatherData){
+    const code = weatherData.daily.weathercode[0];
+    const tMax = Math.round(weatherData.daily.temperature_2m_max[0]);
+    const tMin = Math.round(weatherData.daily.temperature_2m_min[0]);
+    const rain = Math.round(weatherData.daily.precipitation_probability_max[0] || 0);
+    weatherLine = `${region.name}は${weatherCodeToText(code)}、${tMin}〜${tMax}℃です。降水確率は${rain}%ほどでございます。`;
+  }
+  let planLine = "本日はご予定がないようです。ゆっくり整えてまいりましょう。";
+  if(todayPlans.length){
+    const p = todayPlans[0];
+    planLine = `本日は${p.time}に「${p.text}」のご予定がございます。`;
+  }else if(tomorrowPlans.length){
+    const p = tomorrowPlans[0];
+    planLine = `明日は${p.time}に「${p.text}」のご予定がございます。今夜は早めのご準備がおすすめです。`;
+  }
+  document.getElementById("speechText").textContent = `${greet}、お嬢様。${weatherLine}${planLine}`;
+}
+function setTalkReply(type){
+  const todayPlans = getTodayPlans();
+  const tomorrowPlans = getTomorrowPlans();
+  const el = document.getElementById("talkReply");
+  const replies = {
+    greet: "おはようございます、お嬢様。本日も静かに、丁寧に整えてまいりましょう。",
+    tired: "それはお疲れでしたね。どうか無理はなさらず、今日は一つだけ終えれば十分でございます。",
+    weather: weatherData ? `${region.name}は${weatherCodeToText(weatherData.daily.weathercode[0])}、最高${Math.round(weatherData.daily.temperature_2m_max[0])}℃です。外出前に確認しておくと安心です。` : "ただいま天気を確認しております。",
+    today: todayPlans.length ? `本日は${todayPlans[0].time}に「${todayPlans[0].text}」がございます。` : "本日はご予定がないようです。",
+    tomorrow: tomorrowPlans.length ? `明日は${tomorrowPlans[0].time}に「${tomorrowPlans[0].text}」がございます。` : "明日のご予定はまだ登録されておりません。",
+    praise: "ここまで進めているだけで十分立派です。少しずつ積み重ねてまいりましょう。",
+    scold: "……お嬢様。先延ばしは感心いたしません。まずは5分だけでも始めてみましょう。",
+    chat: "今日はどのようなお気持ちですか。穏やかなお話でも、少し甘い時間でも、お付き合いいたします。"
+  };
+  el.textContent = replies[type];
+}
+function loadDatePref(){
+  try{ return JSON.parse(localStorage.getItem(DATE_PREF_KEY)) || {outfit:"執事服", place:"公園"}; }
+  catch(e){ return {outfit:"執事服", place:"公園"}; }
+}
+function saveDatePref(){
+  localStorage.setItem(DATE_PREF_KEY, JSON.stringify(datePref));
+  renderDate();
+}
+function renderDate(){
+  document.querySelectorAll(".chip-btn").forEach(btn => {
+    const type = btn.dataset.type, value = btn.dataset.value;
+    btn.classList.toggle("active", datePref[type] === value);
+  });
+  document.getElementById("dateSummary").textContent = datePref.outfit + " × " + datePref.place;
+  const map = {
+    "公園":"本日は穏やかな風が心地よいですね。ゆっくり歩きながらお話ししましょうか。",
+    "カフェ":"落ち着いた席をご用意したい気分です。温かいお飲み物でもいかがでしょう。",
+    "お家デート":"本日は静かに過ごしましょう。どうぞ肩の力を抜いて、こちらへ。",
+    "ドライブデート":"行き先は私にお任せください。心地よい時間にいたします。"
+  };
+  document.getElementById("dateReply").textContent = map[datePref.place] + " 本日の装いは「" + datePref.outfit + "」で整えております。";
+  document.getElementById("dateNote").textContent = `選択中：${datePref.outfit}で${datePref.place}へ。今後は背景や服装差し替えにも拡張できます。`;
+}
+document.addEventListener("click", (e) => {
+  if(e.target.classList.contains("chip-btn")){
+    const type = e.target.dataset.type;
+    const value = e.target.dataset.value;
+    datePref[type] = value;
+    saveDatePref();
+  }
+});
+document.addEventListener("DOMContentLoaded", () => {
+  updateClock();
+  updateHomeTheme();
+  trySetImage(document.getElementById("charImage"), "elios_home");
+  document.getElementById("regionInput").value = region.name;
+  document.getElementById("regionBadge").textContent = "地域：" + region.name;
+  loadWeather();
+  renderSchedules();
+  renderDate();
+  setTalkReply("greet");
+  setInterval(updateClock, 1000 * 30);
+});
+</script>
+</body>
+</html>
