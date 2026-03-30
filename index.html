@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>エリオス ホーム画面</title>
+<style>
+:root{
+  --bg:#f4f7fc; --card:rgba(255,255,255,.90); --line:#dbe7ff; --text:#1f2937; --muted:#6b7280;
+  --soft:#eef4ff; --accent:#6e93ff; --shadow:0 10px 24px rgba(31,41,55,.06); --navh:86px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic","Noto Sans JP",sans-serif;background:var(--bg);color:var(--text)}
+body{min-height:100vh}
+.app{max-width:560px;height:100vh;margin:0 auto;padding:10px 10px calc(var(--navh) + env(safe-area-inset-bottom) + 8px);display:flex;flex-direction:column;overflow:hidden}
+.screen{display:none;height:100%;min-height:0}
+.screen.active{display:flex}
+.home-screen{flex-direction:column}
+.hero{position:relative;flex:1;min-height:0;overflow:hidden;border-radius:28px;border:1px solid var(--line);box-shadow:var(--shadow);background:linear-gradient(180deg,#fbfdff,#edf4ff)}
+.bg-layer{position:absolute;inset:0;background-size:cover;background-position:center}
+.bg-overlay{position:absolute;inset:0;background:linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.45) 52%, rgba(255,255,255,.78))}
+.topbar{position:absolute;top:10px;left:10px;right:10px;z-index:3;display:flex;gap:8px;align-items:stretch}
+.top-pill{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 6px 16px rgba(31,41,55,.04);padding:10px 12px;backdrop-filter:blur(8px)}
+.time-pill{min-width:96px;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800}
+.top-right{flex:1;display:grid;grid-template-columns:1fr;gap:8px}
+.mini-line{font-size:12px;color:var(--muted);font-weight:700;margin-bottom:4px}
+.main-line{font-size:14px;font-weight:800;line-height:1.45}
+.char-wrap{position:absolute;left:0;right:0;top:74px;bottom:128px;z-index:2;display:flex;align-items:flex-end;justify-content:center;overflow:hidden}
+.character{width:100%;max-width:500px;height:100%;display:flex;align-items:flex-end;justify-content:center}
+.character img{max-width:100%;max-height:100%;object-fit:contain;object-position:center bottom;filter:drop-shadow(0 8px 20px rgba(0,0,0,.14))}
+.speech-wrap{position:absolute;left:12px;right:12px;bottom:110px;z-index:4}
+.speech{position:relative;background:rgba(255,255,255,.94);border:1px solid #e8efff;border-radius:22px;padding:14px 16px;box-shadow:0 8px 18px rgba(31,41,55,.06);backdrop-filter:blur(10px)}
+.speech::after{content:"";position:absolute;left:24px;bottom:-10px;width:18px;height:18px;background:rgba(255,255,255,.94);border-right:1px solid #e8efff;border-bottom:1px solid #e8efff;transform:rotate(45deg)}
+.speech-name{font-size:12px;color:var(--muted);font-weight:800;margin-bottom:5px}
+.speech-main{font-size:16px;line-height:1.72;font-weight:800;min-height:54px}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.badge{display:inline-flex;align-items:center;padding:7px 11px;border-radius:999px;border:1px solid var(--line);background:var(--soft);font-size:12px;font-weight:800}
+.panel{background:#fff;border:1px solid var(--line);border-radius:24px;padding:14px;box-shadow:var(--shadow);height:100%;overflow:auto}
+.panel-title{margin:0 0 8px;font-size:22px;font-weight:800}
+.panel-sub{margin:0 0 14px;font-size:14px;line-height:1.7;color:var(--muted)}
+.card-grid{display:grid;gap:10px}
+.info-card{background:linear-gradient(180deg,#fbfdff,#f5f8ff);border:1px solid var(--line);border-radius:20px;padding:14px}
+.info-title{font-size:13px;color:var(--muted);font-weight:800;margin-bottom:6px}
+.info-main{font-size:16px;font-weight:800;line-height:1.6}
+.info-sub{font-size:13px;color:var(--muted);line-height:1.6;margin-top:4px}
+.chat-wrap{display:flex;flex-direction:column;gap:10px;height:100%;min-height:0}
+.chat-log{flex:1;min-height:0;overflow:auto;background:#f7faff;border:1px solid var(--line);border-radius:20px;padding:12px}
+.chat-row{display:flex;gap:8px;align-items:flex-end;margin-bottom:10px}
+.chat-row.user{justify-content:flex-end}
+.chat-icon{width:34px;height:34px;border-radius:50%;overflow:hidden;border:1px solid var(--line);background:#fff;flex:0 0 auto}
+.chat-icon img{width:100%;height:100%;object-fit:cover}
+.bubble{max-width:74%;padding:10px 12px;border-radius:16px;line-height:1.65;font-size:15px;box-shadow:0 4px 12px rgba(31,41,55,.04);white-space:pre-wrap}
+.mina-bubble{background:#fff;border:1px solid var(--line)}
+.user-bubble{background:var(--accent);color:#fff}
+.quick{display:flex;gap:8px;overflow-x:auto}
+.quick-btn{flex:0 0 auto;border:none;border-radius:999px;padding:10px 14px;background:var(--soft);border:1px solid var(--line);color:var(--text);font-weight:800}
+.input-row{display:flex;gap:8px}
+.input-row input{flex:1;min-width:0;padding:12px 14px;border-radius:14px;border:1px solid var(--line);font-size:16px}
+.primary-btn,.ghost-btn{border:none;border-radius:14px;padding:12px 16px;font-size:15px;font-weight:800}
+.primary-btn{background:linear-gradient(90deg,#6d93ff,#7ea7ff);color:#fff;box-shadow:0 8px 18px rgba(91,124,255,.18)}
+.ghost-btn{background:#fff;border:1px solid var(--line);color:var(--text)}
+.small-list{display:grid;gap:10px}
+.date-option{border:1px solid var(--line);border-radius:18px;padding:12px;background:#fff}
+.date-option-title{font-size:15px;font-weight:800}
+.date-option-sub{font-size:13px;color:var(--muted);line-height:1.6;margin-top:4px}
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:10;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:rgba(245,247,251,.95);backdrop-filter:blur(12px);border-top:1px solid #dfe8ff}
+.nav-inner{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.nav-btn{border:none;background:#fff;border:1px solid var(--line);color:var(--text);border-radius:16px;padding:10px 6px;box-shadow:0 6px 14px rgba(31,41,55,.04);display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;font-weight:800}
+.nav-btn.active{background:linear-gradient(180deg,#eef4ff,#dfeaff);border-color:#bfd1ff;color:#3454c6}
+.nav-ico{font-size:20px}
+@media (max-width:520px){
+  .time-pill{font-size:25px;min-width:86px}
+  .main-line{font-size:13px}
+  .speech-main{font-size:15px}
+  .bubble{max-width:80%}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <section id="screen-home" class="screen home-screen active">
+    <div class="hero">
+      <div class="bg-layer" id="bgLayer"></div>
+      <div class="bg-overlay"></div>
+      <div class="topbar">
+        <div class="top-pill time-pill" id="timeText">08:34</div>
+        <div class="top-right">
+          <div class="top-pill">
+            <div class="mini-line">天気</div>
+            <div class="main-line" id="weatherTop">晴れ 22℃</div>
+          </div>
+          <div class="top-pill">
+            <div class="mini-line">今日の予定</div>
+            <div class="main-line" id="scheduleTop">10:00 英語を15分</div>
+          </div>
+        </div>
+      </div>
+      <div class="char-wrap">
+        <div class="character">
+          <img id="charImage" src="" alt="エリオス" />
+        </div>
+      </div>
+      <div class="speech-wrap">
+        <div class="speech">
+          <div class="speech-name">月城 エリオス</div>
+          <div class="speech-main" id="speechText">おはようございます、お嬢様。本日も静かに整えてまいりましょう。</div>
+          <div class="badges">
+            <div class="badge" id="timeBadge">朝</div>
+            <div class="badge" id="moodBadge">穏やか</div>
+            <div class="badge">服装：時間帯連動</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="screen-talk" class="screen">
+    <div class="panel">
+      <h2 class="panel-title">会話</h2>
+      <p class="panel-sub">エリオスと自然に会話できます。</p>
+      <div class="chat-wrap">
+        <div class="chat-log" id="chatLog"></div>
+        <div class="quick">
+          <button class="quick-btn" onclick="sendQuick('今日は少し疲れた')">疲れた</button>
+          <button class="quick-btn" onclick="sendQuick('今日はやる気がある')">やる気ある</button>
+          <button class="quick-btn" onclick="sendQuick('予定を整理したい')">予定整理</button>
+          <button class="quick-btn" onclick="sendQuick('今日は雑談したい')">雑談</button>
+        </div>
+        <div class="input-row">
+          <input id="talkInput" placeholder="ここに話しかける" />
+          <button class="primary-btn" onclick="sendTalk()">送信</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="screen-plan" class="screen">
+    <div class="panel">
+      <h2 class="panel-title">予定</h2>
+      <p class="panel-sub">今日の予定と、次の一歩を整理します。</p>
+      <div class="card-grid">
+        <div class="info-card">
+          <div class="info-title">今日の優先</div>
+          <div class="info-main">英語 15分 / 買い物 / 早めに休む</div>
+          <div class="info-sub">やることは3つまでに絞ると動きやすいです。</div>
+        </div>
+        <div class="info-card">
+          <div class="info-title">次の予定</div>
+          <div class="info-main">14:00〜 外出準備</div>
+          <div class="info-sub">出発前に天気と持ち物を確認しましょう。</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="screen-date" class="screen">
+    <div class="panel">
+      <h2 class="panel-title">デート</h2>
+      <p class="panel-sub">エリオスとの擬似デート案です。</p>
+      <div class="small-list">
+        <div class="date-option">
+          <div class="date-option-title">朝のテラスで紅茶</div>
+          <div class="date-option-sub">「朝の空気は落ち着きます。今日は穏やかに始めましょう」</div>
+        </div>
+        <div class="date-option">
+          <div class="date-option-title">午後の街歩き</div>
+          <div class="date-option-sub">「天気もよさそうですし、少しだけ外の空気を吸いに参りませんか」</div>
+        </div>
+        <div class="date-option">
+          <div class="date-option-title">夜の静かなラウンジ</div>
+          <div class="date-option-sub">「本日は私がエスコートいたします。どうぞ安心してお任せください」</div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <button class="nav-btn active" data-screen="home" onclick="openScreen('home')"><div class="nav-ico">🏠</div><div>ホーム</div></button>
+    <button class="nav-btn" data-screen="talk" onclick="openScreen('talk')"><div class="nav-ico">💬</div><div>会話</div></button>
+    <button class="nav-btn" data-screen="plan" onclick="openScreen('plan')"><div class="nav-ico">📅</div><div>予定</div></button>
+    <button class="nav-btn" data-screen="date" onclick="openScreen('date')"><div class="nav-ico">❤️</div><div>デート</div></button>
+  </div>
+</nav>
+
+<script>
+const STORAGE_KEY = "elios_chat_memory_layout_v2";
+let memory = loadMemory();
+
+function loadMemory(){
+  try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+  catch(e){ return []; }
+}
+function saveMemory(items){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(items.slice(-30)));
+}
+function openScreen(name){
+  document.querySelectorAll(".screen").forEach(el => el.classList.remove("active"));
+  document.getElementById("screen-" + name).classList.add("active");
+  document.querySelectorAll(".nav-btn").forEach(btn => btn.classList.remove("active"));
+  const target = document.querySelector('.nav-btn[data-screen="' + name + '"]');
+  if(target) target.classList.add("active");
+}
+function updateClock(){
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,"0");
+  const m = String(now.getMinutes()).padStart(2,"0");
+  document.getElementById("timeText").textContent = h + ":" + m;
+}
+function updateHomeTheme(){
+  const hour = new Date().getHours();
+  const bg = document.getElementById("bgLayer");
+  const speech = document.getElementById("speechText");
+  const timeBadge = document.getElementById("timeBadge");
+  const moodBadge = document.getElementById("moodBadge");
+  if(hour >= 6 && hour < 12){
+    bg.style.background = "linear-gradient(180deg,#fff6ea,#dfeeff 55%,#f3f8ff)";
+    speech.textContent = "おはようございます、お嬢様。本日も静かに整えてまいりましょう。";
+    timeBadge.textContent = "朝";
+    moodBadge.textContent = "穏やか";
+  }else if(hour >= 12 && hour < 18){
+    bg.style.background = "linear-gradient(180deg,#f4fbff,#dff6ea 55%,#f7fbff)";
+    speech.textContent = "日中は焦らず、やるべきことを一つずつ進めてまいりましょう。";
+    timeBadge.textContent = "昼";
+    moodBadge.textContent = "整える";
+  }else{
+    bg.style.background = "linear-gradient(180deg,#24345e,#5d6fa3 58%,#e8eefb)";
+    speech.textContent = "本日もお疲れさまです。夜は無理をなさらず、心を落ち着けてお過ごしください。";
+    timeBadge.textContent = "夜";
+    moodBadge.textContent = "やさしい";
+  }
+}
+function trySetImage(element, baseName){
+  const candidates = [
+    baseName + ".png",
+    baseName + ".PNG",
+    baseName + ".jpg",
+    baseName + ".JPG",
+    baseName + ".jpeg",
+    baseName + ".JPEG"
+  ];
+  let index = 0;
+  function loadNext(){
+    if(index >= candidates.length){
+      element.alt = "画像が見つかりません";
+      return;
+    }
+    const src = candidates[index];
+    const tester = new Image();
+    tester.onload = function(){
+      element.src = src;
+    };
+    tester.onerror = function(){
+      index += 1;
+      loadNext();
+    };
+    tester.src = src;
+  }
+  loadNext();
+}
+function addTalkMessage(role, text, save=true){
+  const log = document.getElementById("chatLog");
+  const row = document.createElement("div");
+  row.className = "chat-row " + role;
+  if(role === "mina"){
+    const icon = document.createElement("div");
+    icon.className = "chat-icon";
+    const img = document.createElement("img");
+    img.src = document.getElementById("charImage").src;
+    icon.appendChild(img);
+    const bubble = document.createElement("div");
+    bubble.className = "bubble mina-bubble";
+    bubble.textContent = text;
+    row.appendChild(icon);
+    row.appendChild(bubble);
+  }else{
+    const bubble = document.createElement("div");
+    bubble.className = "bubble user-bubble";
+    bubble.textContent = text;
+    row.appendChild(bubble);
+  }
+  log.appendChild(row);
+  log.scrollTop = log.scrollHeight;
+  if(save){
+    memory.push({role, text, at:Date.now()});
+    saveMemory(memory);
+  }
+}
+function renderChat(){
+  const log = document.getElementById("chatLog");
+  log.innerHTML = "";
+  if(memory.length === 0){
+    addTalkMessage("mina", "おかえりなさい、お嬢様。今日はどのようにお過ごしになりますか。", false);
+    return;
+  }
+  memory.forEach(item => addTalkMessage(item.role, item.text, false));
+}
+function getReply(text){
+  const t = text.toLowerCase();
+  if(t.includes("疲") || t.includes("しんど")) return "それはお疲れでしたね。今日は一つだけ終わらせれば十分です。無理はなさらないでください。";
+  if(t.includes("やる気") || t.includes("元気")) return "素晴らしいです。その勢いを使って、まずは15分だけ集中してみましょう。";
+  if(t.includes("予定")) return "承知しました。優先順位の高いものを三つまでに絞るのが良いでしょう。";
+  if(t.includes("雑談")) return "もちろんでございます。今日はどんなことが心に残っておりますか。";
+  return "ええ、しっかり伺っております。もう少しだけ詳しくお聞かせいただけますか。";
+}
+function quickTalk(text){
+  addTalkMessage("user", text);
+  const reply = getReply(text);
+  addTalkMessage("mina", reply);
+}
+function sendTalk(){
+  const input = document.getElementById("talkInput");
+  const text = input.value.trim();
+  if(!text) return;
+  quickTalk(text);
+  input.value = "";
+}
+document.addEventListener("DOMContentLoaded", () => {
+  updateClock();
+  updateHomeTheme();
+  trySetImage(document.getElementById("charImage"), "elios_home");
+  renderChat();
+  setInterval(updateClock, 1000 * 30);
+  document.getElementById("talkInput").addEventListener("keydown", function(e){
+    if(e.key === "Enter") sendTalk();
+  });
+});
+</script>
+</body>
+</html>
